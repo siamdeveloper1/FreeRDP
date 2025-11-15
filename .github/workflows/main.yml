@@ -1,4 +1,4 @@
-name: RDP
+name: RDP 
 
 on:
   workflow_dispatch:
@@ -16,11 +16,11 @@ jobs:
 
           # Enable Remote Desktop and disable Network Level Authentication (if needed)
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' `
-                           -Name "fDenyTSConnections" -Value 0 -Force
+                             -Name "fDenyTSConnections" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                           -Name "UserAuthentication" -Value 0 -Force
+                             -Name "UserAuthentication" -Value 0 -Force
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' `
-                           -Name "SecurityLayer" -Value 0 -Force
+                             -Name "SecurityLayer" -Value 0 -Force
 
           # Remove any existing rule with the same name to avoid duplication
           netsh advfirewall firewall delete rule name="RDP-Tailscale"
@@ -53,8 +53,7 @@ jobs:
           Add-LocalGroupMember -Group "Administrators" -Member "RDP"
           Add-LocalGroupMember -Group "Remote Desktop Users" -Member "RDP"
 
-          # FIX 2: Changed RDP_CREDS to RDP_PASSWORD to store *only* the password
-          echo "RDP_PASSWORD=$password" >> $env:GITHUB_ENV
+          echo "RDP_CREDS=User: RDP | Password: $password" >> $env:GITHUB_ENV
           
           if (-not (Get-LocalUser -Name "RDP")) {
               Write-Error "User creation failed"
@@ -67,10 +66,7 @@ jobs:
           $installerPath = "$env:TEMP\tailscale.msi"
           
           Invoke-WebRequest -Uri $tsUrl -OutFile $installerPath
-          
-          # FIX 1: Combined arguments into a single string for -ArgumentList
           Start-Process msiexec.exe -ArgumentList "/i ""$installerPath"" /quiet /norestart" -Wait
-          
           Remove-Item $installerPath -Force
 
       - name: Establish Tailscale Connection
@@ -94,7 +90,7 @@ jobs:
           }
           echo "TAILSCALE_IP=$tsIP" >> $env:GITHUB_ENV
           echo "TS_HOSTNAME=$tsHostname" >> $env:GITHUB_ENV
-
+      
       - name: Verify RDP Accessibility
         run: |
           Write-Host "Tailscale IP: $env:TAILSCALE_IP"
@@ -112,8 +108,7 @@ jobs:
           Write-Host "Hostname: $env:TS_HOSTNAME"
           Write-Host "Address: $env:TAILSCALE_IP"
           Write-Host "Username: RDP"
-          # FIX 2: Changed to use the new RDP_PASSWORD variable for clean output
-          Write-Host "Password: $env:RDP_PASSWORD"
+          Write-Host "Password: $(echo $env:RDP_CREDS)"
           Write-Host "Website: https://adnwebs.com"
           Write-Host "===============================`n"
           
@@ -121,3 +116,4 @@ jobs:
               Write-Host "[$(Get-Date)] RDP Active - adnwebs.com - Use Ctrl+C in workflow to terminate"
               Start-Sleep -Seconds 300
           }
+
